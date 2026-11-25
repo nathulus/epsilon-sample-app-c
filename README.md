@@ -1,42 +1,82 @@
-# Sample C app for Epsilon
+# NumWorks Autre
 
-[![Build](https://github.com/numworks/epsilon-sample-app-c/actions/workflows/build.yml/badge.svg)](https://github.com/numworks/epsilon-sample-app-c/actions/workflows/build.yml)
+Application externe (**NWA / EADK**) pour NumWorks N0100–N0120, testée en compilation pour **Epsilon 23.2.6** (API EADK niveau 0).
 
-This is a sample C app to use on a [NumWorks calculator](https://www.numworks.com).
+> **Ne modifie pas le firmware.** Le fichier produit `output/app.nwa` s’installe via le [site officiel NumWorks](https://my.numworks.com/apps) (uploader d’applications externes).
 
-```c
-#include <eadk.h>
+## Contenu (v0.1)
 
-int main(int argc, char * argv[]) {
-  eadk_display_draw_string("Hello, world!", (eadk_point_t){0, 0}, true, eadk_color_black, eadk_color_white);
-  eadk_timing_msleep(3000);
-}
+- Menu principal **Autre** (6 entrées ; seul **Formules** est actif)
+- Module **Formules → Électricité → Puissance P = U × I**
+- Saisie au clavier, calcul détaillé, icône 55×56 px
+
+## Prérequis (Windows)
+
+1. **Node.js** (v20+ ; testé avec v24 — utiliser `nwlink@0.0.19`)
+2. **GNU Arm Embedded Toolchain** — par ex. `winget install Arm.GnuArmEmbeddedToolchain`
+3. (Optionnel) **GNU make** sous MSYS2 pour `make build`
+4. **Python 3** + Pillow pour régénérer l’icône
+
+## Compiler
+
+### PowerShell (recommandé sans MSYS2)
+
+```powershell
+python scripts/generate_icon.py
+.\scripts\build.ps1
 ```
 
-## Build the app
+Le binaire est dans `output/app.nwa`.
 
-To build this sample app, you will need to install the [embedded ARM toolchain](https://developer.arm.com/Tools%20and%20Software/GNU%20Toolchain) and [Node.js](https://nodejs.org/en/). The C SDK for Epsilon apps is shipped as an npm module called [nwlink](https://www.npmjs.com/package/nwlink) that will automatically be installed at compile time.
+### Make (Linux / MSYS2)
 
-```shell
-brew install numworks/tap/arm-none-eabi-gcc node # Or equivalent on your OS
+```bash
 make clean && make build
 ```
 
-You should now have a `output/app.nwa` file that you can distribute! Anyone can now install it on their calculator from the [NumWorks online uploader](https://my.numworks.com/apps).
+## Installer sur la calculatrice (N0120, Epsilon 23.2.6)
 
-## Run the app locally
+**Important :** on installe le fichier **`app.nwa`**, pas les scripts Python du dossier `scripts/`.  
+La commande `nwlink install-nwa` depuis PowerShell **ne fonctionne en général pas sous Windows** (`no devices found`) : l’installation passe par le **navigateur** (WebUSB).
 
-To run the app on your development machine, you can use the following command
+1. Compiler : `.\scripts\build.ps1` → `output\app.nwa`
+2. Raccourci : `.\scripts\ouvrir-installateur.ps1` (ouvre la page officielle + copie le chemin du fichier)
+3. **Chrome** ou **Edge** uniquement (pas Firefox), **un seul onglet** ouvert
+4. Calculatrice **allumée**, câble **données** (pas charge seule), connectée en USB
+5. Se connecter sur https://my.numworks.com/apps (compte NumWorks gratuit)
+6. **Connect** → choisir « NumWorks Calculator » → ajouter `app.nwa` → **Install**
+7. Si la calculatrice n’apparaît pas : réparer le pilote Windows (voir [aide NumWorks](https://www.numworks.com/support/handheld/detect/)), autre port USB, redémarrer le PC
 
-```shell
-# Now connect your NumWorks calculator to your computer using the USB cable
-make run
+Sur la page d’apps, **re-sélectionnez aussi les applis déjà installées** que vous voulez garder : la liste envoyée remplace l’ancienne.
+
+**Important :** les apps externes sont effacées en cas de réinitialisation ou de crash système — c’est le comportement officiel Epsilon.
+
+## Structure du code
+
+```
+src/
+  main.c              # Métadonnées EADK
+  app.c               # Menu principal
+  menu/               # Navigation liste
+  ui/                 # Affichage et événements
+  modules/formules/   # Formules (extensible)
+assets/icon/          # icon.png 55×56
+scripts/build.ps1     # Build Windows
+output/app.nwa        # Application installable
 ```
 
-## License
+## Ajouter une formule
 
-This sample app is distributed under the terms of the BSD License. See LICENSE for details.
+Dans `src/modules/formules/formules.c`, compléter le tableau `g_formulas` et ajouter une entrée de menu.
 
-## Trademarks
+## API EADK utilisée
 
-NumWorks is a registered trademark.
+- Affichage : `eadk_display_*`
+- Clavier : `eadk_event_get`
+- Pause : `eadk_timing_msleep` (non utilisé en v0.1)
+
+Non utilisées (simulation / absentes sur matériel réel) : fonctions batterie et USB.
+
+## Licence
+
+Projet dérivé du modèle [epsilon-sample-app-c](https://github.com/numworks/epsilon-sample-app-c) (BSD). Voir `LICENSE`.
